@@ -5,12 +5,10 @@ export class easyWebgl2 {
 
         const gl = this.gl;
         gl.enable(gl.BLEND);
-
+        
         // 알파 블렌딩 방식을 설정 (일반적인 방식)
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        // WebGL은 화면에 뭘 그릴 때, "정점(Vertex)"과 "프래그먼트(Fragment)" 셰이더를 사용함.
-        // 여기선 이미지를 그냥 2D로 그릴거니까, 아주 단순한 셰이더를 만든다.
         const vertexShaderSource = `
             attribute vec2 a_position;
             attribute vec2 a_texcoord;
@@ -18,12 +16,10 @@ export class easyWebgl2 {
             varying vec2 v_texcoord;
 
             void main() {
-                // 픽셀 좌표를 클립공간(-1~1)으로 바꿔주는 계산
                 vec2 zeroToOne = a_position / u_resolution;
                 vec2 zeroToTwo = zeroToOne * 2.0;
                 vec2 clipSpace = zeroToTwo - 1.0;
 
-                // Y축 뒤집기 (WebGL은 좌하단이 (0,0)이라서)
                 gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
                 v_texcoord = a_texcoord;
             }
@@ -31,12 +27,20 @@ export class easyWebgl2 {
 
         const fragmentShaderSource = `
             precision mediump float;
+
             varying vec2 v_texcoord;
             uniform sampler2D u_texture;
+            uniform vec4 u_color;
+
             void main() {
-                vec2 coord = clamp(v_texcoord, 0.0, 1.0);
-                gl_FragColor = texture2D(u_texture, v_texcoord);
+                vec4 tex = texture2D(u_texture, v_texcoord);
+                gl_FragColor = vec4(
+                    tex.rgb * u_color.rgb,
+                    tex.a * u_color.a
+                );
             }
+
+
         `;
 
         // 셰이더를 실제로 GPU에 컴파일하고 연결
@@ -49,6 +53,8 @@ export class easyWebgl2 {
         this.positionLocation = gl.getAttribLocation(this.program, "a_position");
         this.texcoordLocation = gl.getAttribLocation(this.program, "a_texcoord");
         this.resolutionLocation = gl.getUniformLocation(this.program, "u_resolution");
+        this.colorLocation = gl.getUniformLocation(this.program, "u_color");
+
 
         // 버퍼(정점 데이터 저장용)
         this.positionBuffer = gl.createBuffer();
@@ -94,6 +100,7 @@ export class easyWebgl2 {
                     const texture = this.gl.createTexture();
                     const gl = this.gl;
                     
+                    // gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
                     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
 
                     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -120,7 +127,7 @@ export class easyWebgl2 {
 
 
 
-    drawImage(image, x, y, w, h,vertex_=null,texcoord_=null) {
+    drawImage(image, x, y, w, h,vertex_=null,texcoord_=null,fillColor_=null) {
         const gl = this.gl;
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
@@ -174,6 +181,23 @@ export class easyWebgl2 {
 
         // 실제 렌더링
         gl.uniform2f(this.resolutionLocation, gl.canvas.width, gl.canvas.height);
+        
+
+        if (fillColor_ != null) {
+            gl.uniform4f(
+                this.colorLocation,
+                fillColor_[0],
+                fillColor_[1],
+                fillColor_[2],
+                fillColor_[3]
+            );
+        } else {
+            gl.uniform4f(this.colorLocation, 1, 1, 1, 1);
+        }
+
+        
+                
+        
         gl.bindTexture(gl.TEXTURE_2D, image.texture);
         gl.drawArrays(gl.TRIANGLES, 0, (vertex_.length / 2));
     }
@@ -203,6 +227,7 @@ export class easyWebgl2 {
             this.gl.viewport(0, 0, displayWidth, displayHeight)
         }
     }
+
 
 }
 

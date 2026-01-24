@@ -1,4 +1,4 @@
-
+ 
 import { easyWebgl2 } from "/@phi/src/script/easyWebgl2.js"
 
 export class PHI {
@@ -19,6 +19,10 @@ export class PHI {
             height:0,
             vertex:null,
         }
+    }
+
+    text(text,color,font){
+        this.app.loadText()
     }
 
 
@@ -52,6 +56,7 @@ export class PHI {
             startY : 0,
             startWidth : 0,
             startHeight : 0, 
+            fillColor:null,
         };
 
         
@@ -108,17 +113,17 @@ export class PHI {
 
     blit(obj_,mark='null'){
         const obj = {...obj_}
-
+        
         if (!obj.img) return;
 
         if ( mark == 'center' ){
             this.move(obj,-(obj.width/2),-(obj.height/2))
-            this.app.drawImage(obj.img,obj.x,obj.y,obj.width,obj.height,obj.vertex,obj.texcoord);
+            this.app.drawImage(obj.img,obj.x,obj.y,obj.width,obj.height,obj.vertex,obj.texcoord,obj.fillColor);
             this.move(obj,+(obj.width/2),+(obj.height/2))
 
 
         } else {
-            this.app.drawImage(obj.img,obj.x,obj.y,obj.width,obj.height,obj.vertex,obj.texcoord);
+            this.app.drawImage(obj.img,obj.x,obj.y,obj.width,obj.height,obj.vertex,obj.texcoord,obj.fillColor);
             
         }
 
@@ -157,8 +162,6 @@ export class PHI {
         }
         return false
     }
-
-
 
     random(num1,num2){
         if (num1 > num2) {
@@ -321,7 +324,6 @@ export class PHI {
             }
         }
     }
-
 
 
 }
