@@ -3,11 +3,12 @@ import {PHI} from "/@phi/src/script/PHI.js"
 
 (async () => {
 
-    const phi = new PHI("canvas");
+    const phi = new PHI("display-canvas");
+    phi.textDisplay("text-canvas");
     phi.display([innerWidth, innerHeight]);
 
-    phi.mainLoop(() => {
-
+    phi.loop(() => {
+        phi.fill(255,255,255);
 
     });
 
