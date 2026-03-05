@@ -193,13 +193,16 @@ export class PHI {
 
     fill(r,g,b,a=255){
         if (this.ctx != null && this.textCanvas != null) {this.ctx.clearRect(0, 0, this.textCanvas.width, this.textCanvas.height)}
-        this.app.clear(
-            r/255,g/255,b/255,a/255
-        );
-
+        if (r <= 1 && g <= 1 && b <= 1 && a <= 1){
+            this.app.clear(
+                r,g,b,a
+            );
+        } else {
+            this.app.clear(
+                r/255,g/255,b/255,a/255
+            );
+        }
     }
-
-
 
 
     distanceGetObj(obj1,obj2,mark="center"){
@@ -391,3 +394,5 @@ PHI.prototype.loop = PHI.prototype.mainLoop;
 PHI.prototype.loop = PHI.prototype.mainLoop;
 PHI.prototype.movex = PHI.prototype.moveX;
 PHI.prototype.movey = PHI.prototype.moveY;
+PHI.prototype.Goto = PHI.prototype.goto;
+PHI.prototype.reSizeDisplay = PHI.prototype.resizeDisplay;
