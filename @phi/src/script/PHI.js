@@ -8,15 +8,15 @@ export class PHI {
         canvas_.height = innerHeight
         canvas_.style.margin = 0
         canvas_.style.padding = 0
-
         this.canvas = canvas_;
         this.app = new easyWebgl2(this.canvas);
         this.textCanvas = null;
         this.ctx = null;
-        
         this.autoResize = false;
-        this.settingList = {
-        }
+        this.dpr = 1;
+        this.width = 0;
+        this.height = 0;
+        this.settingList = {}
         
     }
 
@@ -34,8 +34,8 @@ export class PHI {
 
     textDisplay(id){
         this.textCanvas = document.getElementById(id);
-        this.textCanvas.width = 1920;
-        this.textCanvas.height = 1080;
+        this.textCanvas.width = this.canvas.width;
+        this.textCanvas.height = this.canvas.height;
         this.ctx = this.textCanvas.getContext('2d');
         this.resizeDisplay()
     }
@@ -71,15 +71,14 @@ export class PHI {
 
     resizeTextCanvas(baseWidth = 1920, baseHeight = 1080) {
         if (this.textCanvas != null){
-            const dpr = window.devicePixelRatio || 1
-            this.textCanvas.style.width = baseWidth + 'px'
-            this.textCanvas.style.height = baseHeight + 'px'
-            const displayWidth  = Math.floor(baseWidth * dpr)
-            const displayHeight = Math.floor(baseHeight * dpr)
+            this.textCanvas.width = baseWidth + 'px'
+            this.textCanvas.height = baseHeight + 'px'
+            const displayWidth  = Math.floor(baseWidth * this.dpr)
+            const displayHeight = Math.floor(baseHeight * this.dpr)
             if (this.textCanvas.width !== displayWidth || this.textCanvas.height !== displayHeight) {
                 this.textCanvas.width  = displayWidth
                 this.textCanvas.height = displayHeight
-                this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+                this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
             }
         }
     }
@@ -87,16 +86,23 @@ export class PHI {
 
     resizeDisplay(){
         this.app.resizeCanvas()
-        this.resizeTextCanvas(this.canvas.width,this.canvas.height)
+        this.dpr = this.app.dpr
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+        this.resizeTextCanvas(this.width,this.height)
+
     }
 
 
 
     display(size){
-        const canvas = this.canvas;
-        canvas.width = size[0]
-        canvas.height = size[1]
-        this.resizeDisplay()
+        this.resizeDisplay();
+        this.canvas.width = size[0];
+        this.canvas.height = size[1];
+        this.width = size[0];
+        this.height = size[1];
+        this.resizeDisplay();
+        // console.log(this.canvas.width)
     }
 
     object(img, pos, size = null, vertex = null,texcoord=null){
@@ -171,13 +177,18 @@ export class PHI {
     blit(obj_,mark='null'){
         const obj = {...obj_}
         
+        this.reSizeBy(obj,this.app.dpr);
+        // this.goto(obj,[obj.x/this.app.dpr,obj.y/this.app.dpr]);
+
+
+        // console.log(obj.x)
+
         if (!obj.img) return;
 
         if ( mark == 'center' ){
             this.move(obj,-(obj.width/2),-(obj.height/2))
             this.app.drawImage(obj.img,obj.x,obj.y,obj.width,obj.height,obj.vertex,obj.texcoord,obj.fillColor);
             this.move(obj,+(obj.width/2),+(obj.height/2))
-
 
         } else {
             this.app.drawImage(obj.img,obj.x,obj.y,obj.width,obj.height,obj.vertex,obj.texcoord,obj.fillColor);
@@ -186,6 +197,10 @@ export class PHI {
 
         return true;
     }
+
+
+
+
 
     mainLoop(func){
         this.app.update(func);

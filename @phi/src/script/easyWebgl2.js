@@ -59,7 +59,7 @@ export class easyWebgl2 {
         // 버퍼(정점 데이터 저장용)
         this.positionBuffer = gl.createBuffer();
         this.texcoordBuffer = gl.createBuffer();
-
+        this.dpr = 1;
         // 이미지(텍스처) 목록
         this.images = [];
 
@@ -218,14 +218,17 @@ export class easyWebgl2 {
 
     
     resizeCanvas() {
-        const dpr = window.devicePixelRatio || 1
-        const displayWidth  = Math.floor(this.gl.canvas.clientWidth  * dpr)
-        const displayHeight = Math.floor(this.gl.canvas.clientHeight * dpr)
+        this.dpr =  window.devicePixelRatio || 1;
+        const displayWidth  = Math.floor(this.gl.canvas.clientWidth  * this.dpr)
+        const displayHeight = Math.floor(this.gl.canvas.clientHeight * this.dpr)
         if (this.gl.canvas.width !== displayWidth || this.gl.canvas.height !== displayHeight) {
             this.gl.canvas.width  = displayWidth
             this.gl.canvas.height = displayHeight
             this.gl.viewport(0, 0, displayWidth, displayHeight)
+
+            return true;
         }
+        return false;
     }
 
 
