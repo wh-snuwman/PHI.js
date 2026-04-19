@@ -176,8 +176,13 @@ export class PHI {
 
     blit(obj_,mark='null'){
         const obj = {...obj_}
-        
+
+        const angle = obj.angle;
         this.reSizeBy(obj,this.app.dpr);
+        if (angle != 0){
+            this.rotate(obj,obj.angle);
+        }
+        
         // this.goto(obj,[obj.x/this.app.dpr,obj.y/this.app.dpr]);
 
 
