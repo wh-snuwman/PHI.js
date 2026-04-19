@@ -20,6 +20,10 @@ export class PHI {
         
     }
 
+    mainLoop(func){
+        this.app.update(func);
+    }
+
     setting(name=String,value=Boolean){
         if (Object.hasOwn(this.settingList,name)){
             this.settingList[name] = value
@@ -68,7 +72,6 @@ export class PHI {
         this.ctx.restore();
     }
 
-
     resizeTextCanvas(baseWidth = 1920, baseHeight = 1080) {
         if (this.textCanvas != null){
             this.textCanvas.width = baseWidth + 'px'
@@ -90,10 +93,7 @@ export class PHI {
         this.width = this.canvas.width;
         this.height = this.canvas.height;
         this.resizeTextCanvas(this.width,this.height)
-
     }
-
-
 
     display(size){
         this.resizeDisplay();
@@ -102,114 +102,47 @@ export class PHI {
         this.width = size[0];
         this.height = size[1];
         this.resizeDisplay();
-        // console.log(this.canvas.width)
     }
 
-    object(img, pos, size = null, vertex = null,texcoord=null){
-        const obj = { 
-            img: null, 
-            x:0, 
-            y:0, 
-            width:0,
-            height:0,
-            vertex: null, 
-            angle:0, 
-            texcoord:null, 
-            startX : 0, 
-            startY : 0,
-            startWidth : 0,
-            startHeight : 0, 
-            fillColor:null,
+    object(img, pos, size = null, vertex = null, texcoord = null){
+        const w = size ? size[0] : img.width;
+        const h = size ? size[1] : img.height;
+        const v = vertex || [
+            pos[0], pos[1], 
+            pos[0] + w, pos[1], 
+            pos[0], pos[1] + h, 
+            pos[0], pos[1] + h, 
+            pos[0] + w, pos[1], 
+            pos[0] + w, pos[1] + h
+        ];
+        return { 
+            img, x: pos[0], y: pos[1], width: w, height: h,
+            vertex: v, angle: 0, 
+            texcoord: texcoord || [0,0, 1,0, 0,1, 0,1, 1,0, 1,1],
+            fillColor: null
         };
-
-        
-        obj.img = img;
-        obj.x = pos[0];
-        obj.y = pos[1];
-        obj.startX = obj.x
-        obj.startY = obj.y
-
-
-        if (size === null){
-            obj.width = img.width;
-            obj.height = img.height;
-        } else {
-            obj.width = size[0];
-            obj.height = size[1];
-        }
-
-        if (vertex == null){
-            const x1 = obj.x;
-            const y1 = obj.y;
-            const x2 = obj.x + obj.width;
-            const y2 = obj.y + obj.height;
-            obj.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]
-        } else {
-            obj.vertex = vertex;
-        }
-        
-
-
-        if (texcoord == null){
-            const u1 = 0.0;       
-            const v1 = 0.0;       
-            const u2 = 1.0;       
-            const v2 = 1.0;       
-
-            texcoord = 
-            obj.texcoord = [
-                u1, v1,
-                u2, v1,
-                u1, v2,
-                u1, v2,
-                u2, v1,
-                u2, v2
-            ];
-
-        } else {
-            obj.texcoord = texcoord;
-        }
-
-
-        return obj;
     }
 
-    blit(obj_,mark='null'){
-        const obj = {...obj_}
+    
 
-        const angle = obj.angle;
-        this.reSizeBy(obj,this.app.dpr);
-        if (angle != 0){
-            this.rotate(obj,obj.angle);
+    blit(obj_, mark='null'){
+        if (!obj_.img) return;
+        let renderVertex = [...obj_.vertex];
+        for(let i=0; i<renderVertex.length; i++){
+            renderVertex[i] *= this.dpr;
         }
-        
-        // this.goto(obj,[obj.x/this.app.dpr,obj.y/this.app.dpr]);
-
-
-        // console.log(obj.x)
-
-        if (!obj.img) return;
-
-        if ( mark == 'center' ){
-            this.move(obj,-(obj.width/2),-(obj.height/2))
-            this.app.drawImage(obj.img,obj.x,obj.y,obj.width,obj.height,obj.vertex,obj.texcoord,obj.fillColor);
-            this.move(obj,+(obj.width/2),+(obj.height/2))
-
-        } else {
-            this.app.drawImage(obj.img,obj.x,obj.y,obj.width,obj.height,obj.vertex,obj.texcoord,obj.fillColor);
-            
+        if (mark === 'center') {
+            const offsetX = (obj_.width / 2) * this.dpr;
+            const offsetY = (obj_.height / 2) * this.dpr;
+            for(let i=0; i<renderVertex.length; i+=2){
+                renderVertex[i] -= offsetX;
+                renderVertex[i+1] -= offsetY;
+            }
         }
-
+        this.app.drawImage(obj_.img, obj_.x, obj_.y, obj_.width, obj_.height, renderVertex, obj_.texcoord, obj_.fillColor);
         return true;
     }
 
-
-
-
-
-    mainLoop(func){
-        this.app.update(func);
-    }
 
     fill(r,g,b,a=255){
         if (this.ctx != null && this.textCanvas != null) {this.ctx.clearRect(0, 0, this.textCanvas.width, this.textCanvas.height)}
@@ -272,8 +205,6 @@ export class PHI {
         const cos = Math.cos(rad);
         const sin = Math.sin(rad);
         const rotated = [];
-
-        
         if (mark == 'zero'){
             for (let i = 0; i < obj.vertex.length; i += 2) {
                 const x = obj.vertex[i];
@@ -299,14 +230,12 @@ export class PHI {
                 rotated.push(rx, ry);
             }
         }
-
         obj.vertex = rotated;
         obj.angle += deg;
         return obj;
     }
 
     reSizeBy(obj_,ratio,mark='center'){
-        
         if (mark == 'center'){
             const obj = {
                 ...obj_,
@@ -318,16 +247,12 @@ export class PHI {
             obj_.y -= obj_.height/2
             obj_.x += obj.width/2
             obj_.y += obj.height/2
-            
-
-            //  이건 가장 나중에 obj_의 버텍스 설정 (신경안써도됨)
             const x1 = obj_.x;
             const y1 = obj_.y;
             const x2 = obj_.x + obj_.width;
             const y2 = obj_.y + obj_.height;
             obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]
             return obj_
-
         } else {
             const obj = {
                 ...obj_,
@@ -344,18 +269,13 @@ export class PHI {
         }
     }
     
-
     move(obj,pos=Array){
-        const addX = pos[0]
-        const addY = pos[1]
-        obj.x += addX
-        obj.y += addY
-
+        obj.x += pos[0]
+        obj.y += pos[1]
         for(let i = 0; i < obj.vertex.length; i+=2){
-            obj.vertex[ i ] += addX
-            obj.vertex[ i + 1 ] += addY
+            obj.vertex[ i ] += pos[0]
+            obj.vertex[ i + 1 ] += pos[1]
         }
-        
         return obj;
     }
 
@@ -378,12 +298,10 @@ export class PHI {
     goto(obj,pos=Array,mark='zero'){
         let addX = pos[0] - obj.x
         let addY = pos[1] - obj.y 
-        
         if (mark == 'center'){
             addX -= obj.width/2 
             addY -= obj.height/2
         }
-
         obj.x +=  pos[0] - obj.x
         obj.y += pos[1] - obj.y 
 
@@ -396,7 +314,6 @@ export class PHI {
 
     
     flip(obj,what='hor'){
-
         if (what == 'hor'){
             for(let i=0; i<obj.texcoord.length; i+=2){
                 obj.texcoord[i] = 1 - obj.texcoord[i]
@@ -410,7 +327,6 @@ export class PHI {
 }
 
 PHI.prototype.obj = PHI.prototype.object;
-PHI.prototype.loop = PHI.prototype.mainLoop;
 PHI.prototype.loop = PHI.prototype.mainLoop;
 PHI.prototype.movex = PHI.prototype.moveX;
 PHI.prototype.movey = PHI.prototype.moveY;
