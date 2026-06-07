@@ -1,4 +1,4 @@
-import {PHI} from "/@phi/src/script/PHI.js"
+import {PHI} from "../../@phi/src/script/PHI.js"
 
 
 (async () => {
