@@ -1,4 +1,4 @@
-export class easyWebgl2 {
+export class core {
     constructor(canvas) {
         this.gl = canvas.getContext("webgl2");
         if (!this.gl) throw new Error("WebGL2를 지원하지 않는 브라우저입니다.");
@@ -208,13 +208,7 @@ export class easyWebgl2 {
         gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
-    update(callback) {
-        const loop = () => {
-            callback();
-            requestAnimationFrame(loop);
-        };
-        requestAnimationFrame(loop);
-    }
+    
 
     
     resizeCanvas() {

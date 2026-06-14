@@ -1,15 +1,22 @@
-import {PHI} from "../../@phi/src/script/PHI.js"
+import { applePhi } from "../../applePhi/src/script/applePhi.js"
 
 
 (async () => {
 
-    const phi = new PHI("display-canvas");
-    phi.textDisplay("text-canvas");
-    phi.display([innerWidth, innerHeight]);
+const phi = new applePhi("display-canvas");
+phi.textDisplay("text-canvas");
+phi.display([innerWidth, innerHeight]);
 
-    phi.loop(() => {
-        phi.fill(255,255,255);
+window.addEventListener('resize',()=>{
+    phi.resizeDisplay()
+})
 
-    });
+
+phi.loop(() => {
+    phi.fill(255,255,255);
+
+
+});
+
 
 })();

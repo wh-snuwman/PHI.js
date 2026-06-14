@@ -1,7 +1,6 @@
- 
-import { easyWebgl2 } from "/@phi/src/script/easyWebgl2.js"
+import { core } from "./core.js"
 
-export class PHI {
+export class applePhi {
     constructor(id){
         const canvas_ = document.getElementById(id)
         canvas_.width = innerWidth
@@ -9,7 +8,7 @@ export class PHI {
         canvas_.style.margin = 0
         canvas_.style.padding = 0
         this.canvas = canvas_;
-        this.app = new easyWebgl2(this.canvas);
+        this.app = new core(this.canvas);
         this.textCanvas = null;
         this.ctx = null;
         this.autoResize = false;
@@ -17,11 +16,51 @@ export class PHI {
         this.width = 0;
         this.height = 0;
         this.settingList = {}
+        this.screenRatio = (1920 / this.width);
+        this.sceneFunc = {}
+        
+        this.docsImg = {}
+        this.docsObj = {}
+        this.mainLoopFunc = function(){};
+        this.scene = ''
+        this.sceneChangeDetect = false
+        this.update()
+        
         
     }
+    
+
+    
+    sceneCode(wantedScene,func){
+        if (this.scene === wantedScene){
+            this.sceneFunc[wantedScene] = func
+        }
+    }
+
+    
+    changeScene(scene){
+        this.scene = scene;
+        this.sceneChangeDetect = true;
+    }
+
+
 
     mainLoop(func){
-        this.app.update(func);
+        this.mainLoopFunc = func;
+    }
+
+     
+
+    update() {
+        const loop = () => {
+            this.mainLoopFunc()
+            for (let key in this.sceneFunc){
+                this.sceneFunc[key]()
+            }
+            
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
     }
 
     setting(name=String,value=Boolean){
@@ -50,15 +89,15 @@ export class PHI {
         document.fonts.add(font);
     }
 
-
-    text(text,pos=[0,0],size='20px',color='balck',font=null,align='left'){
+    //#region 
+    text(text,pos=[0,0],size='20px',color='black',font=null,align='left'){
         if (this.ctx == null){
             console.error('text canvas is not defined')
             return;
         }
         this.ctx.save();
         
-        if (font == null || font == undefined || typeof(font) != String){
+        if (font == null || font == undefined || typeof(font) != 'string'){
             this.ctx.font = `${size} serif`;
         } else {
             this.ctx.font = `${size} ${font}`;
@@ -67,8 +106,7 @@ export class PHI {
         this.ctx.fillStyle = color;
         this.ctx.textAlign = align;
         this.ctx.textBaseline = 'alphabetic';
-        this.ctx.fillText(text, pos[0],pos[1]);
-        this.ctx.textAlign = 'left';
+        this.ctx.fillText(text, pos[0]*this.screenRatio,pos[1]*this.screenRatio);
         this.ctx.restore();
     }
 
@@ -92,11 +130,11 @@ export class PHI {
         this.dpr = this.app.dpr
         this.width = this.canvas.width;
         this.height = this.canvas.height;
+        this.screenRatio = (this.width / 1920);
         this.resizeTextCanvas(this.width,this.height)
     }
 
     display(size){
-        this.resizeDisplay();
         this.canvas.width = size[0];
         this.canvas.height = size[1];
         this.width = size[0];
@@ -124,25 +162,6 @@ export class PHI {
     }
 
     
-
-    blit(obj_, mark='null'){
-        if (!obj_.img) return;
-        let renderVertex = [...obj_.vertex];
-        for(let i=0; i<renderVertex.length; i++){
-            renderVertex[i] *= this.dpr;
-        }
-        if (mark === 'center') {
-            const offsetX = (obj_.width / 2) * this.dpr;
-            const offsetY = (obj_.height / 2) * this.dpr;
-            for(let i=0; i<renderVertex.length; i+=2){
-                renderVertex[i] -= offsetX;
-                renderVertex[i+1] -= offsetY;
-            }
-        }
-        this.app.drawImage(obj_.img, obj_.x, obj_.y, obj_.width, obj_.height, renderVertex, obj_.texcoord, obj_.fillColor);
-        return true;
-    }
-
 
     fill(r,g,b,a=255){
         if (this.ctx != null && this.textCanvas != null) {this.ctx.clearRect(0, 0, this.textCanvas.width, this.textCanvas.height)}
@@ -176,7 +195,7 @@ export class PHI {
         );
     }
 
-    isEncounterPos(obj,pos){ // 추후 가능하다면 정점이 전환된 이미지의 접촉여부도 감지할수 있게 만들기
+    isEncounterPos(obj,pos){
         if (((obj.x <= pos[0])  && (pos[0] <= obj.x + obj.width)) && ((obj.y <= pos[1]) && (pos[1] <= obj.y + obj.height))) {          
             return true  
         }
@@ -236,6 +255,7 @@ export class PHI {
     }
 
     reSizeBy(obj_,ratio,mark='center'){
+        const an = obj_.angle;
         if (mark == 'center'){
             const obj = {
                 ...obj_,
@@ -252,7 +272,7 @@ export class PHI {
             const x2 = obj_.x + obj_.width;
             const y2 = obj_.y + obj_.height;
             obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]
-            return obj_
+            
         } else {
             const obj = {
                 ...obj_,
@@ -265,9 +285,28 @@ export class PHI {
             const x2 = obj_.x + obj_.width;
             const y2 = obj_.y + obj_.height;
             obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]
-            return obj_
         }
+        this.rotate(obj_,an);
+        return obj_
     }
+
+    reSize(obj_,size){
+        const an = obj_.angle;
+        const obj = {
+            ...obj_,
+            vertex: [...obj_.vertex]
+        };
+        obj_.width = size[0];
+        obj_.height = size[1];
+        const x1 = obj_.x;
+        const y1 = obj_.y;
+        const x2 = obj_.x + obj_.width;
+        const y2 = obj_.y + obj_.height;
+        obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]
+        this.rotate(obj_,an);
+        return obj_
+    }
+
     
     move(obj,pos=Array){
         obj.x += pos[0]
@@ -278,7 +317,7 @@ export class PHI {
         }
         return obj;
     }
-
+ 
     moveX(obj,addX){
         obj.x += addX
         for(let i = 0; i < obj.vertex.length; i+=2){
@@ -324,11 +363,41 @@ export class PHI {
             }
         }
     }
-}
 
-PHI.prototype.obj = PHI.prototype.object;
-PHI.prototype.loop = PHI.prototype.mainLoop;
-PHI.prototype.movex = PHI.prototype.moveX;
-PHI.prototype.movey = PHI.prototype.moveY;
-PHI.prototype.Goto = PHI.prototype.goto;
-PHI.prototype.reSizeDisplay = PHI.prototype.resizeDisplay;
+
+    blit(obj, mark = 'null') {  
+        if (!obj.img) return;
+        const { img, x, y, width, height, vertex, texcoord, fillColor } = obj;
+        const ratioMulp =  this.screenRatio;
+        const renderX = x * ratioMulp;
+        const renderY = y * ratioMulp;
+        const renderW = width * ratioMulp;
+        const renderH = height * ratioMulp;
+        const scaledVertex = vertex ? vertex.map(v => v * ratioMulp) : null;
+
+        this.app.drawImage(
+            img, 
+            renderX, 
+            renderY, 
+            renderW, 
+            renderH, 
+            scaledVertex || vertex, 
+            texcoord, 
+            fillColor
+        );
+    }
+    //#endregion
+
+
+    async docsLoad(){
+        location.replace("../applePhi/docs/docs.html");
+    }
+
+    
+}
+applePhi.prototype.obj = applePhi.prototype.object;
+applePhi.prototype.loop = applePhi.prototype.mainLoop;
+applePhi.prototype.movex = applePhi.prototype.moveX;
+applePhi.prototype.movey = applePhi.prototype.moveY;
+applePhi.prototype.Goto = applePhi.prototype.goto;
+applePhi.prototype.reSizeDisplay = applePhi.prototype.resizeDisplay;
