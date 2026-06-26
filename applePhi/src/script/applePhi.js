@@ -18,28 +18,62 @@ export class applePhi {
         this.settingList = {}
         this.screenRatio = (1920 / this.width);
         this.sceneFunc = {}
-        
         this.docsImg = {}
         this.docsObj = {}
         this.mainLoopFunc = function(){};
-        this.scene = ''
+        this.nowScene = ''
         this.sceneChangeDetect = false
         this.update()
+
+        this.mousepos = []
+        this.click_l = false
+        this.click_r = false
+        this.press_l = false
+        this.press_r = false
+
+        document.addEventListener('mousedown',(event) => {
+            if (event.button == 0){
+                this.click_l = true
+                this.press_l = true
+            }
+            else if (event.button == 2){
+                this.click_r = true
+                this.press_r = true
+            }
+        })
+
+        document.addEventListener('mouseup',(event) => {
+            if (event.button == 0){
+                this.press_l = false
+            }
+            else if (event.button == 2){
+                this.press_r = false
+            }
+        })
+
+
+
+        document.addEventListener('mousemove',(event) => {
+            this.mousepos = [event.offsetX,event.offsetY]
+        })
+
         
-        
+
+
     }
+
     
 
     
-    sceneCode(wantedScene,func){
-        if (this.scene === wantedScene){
+    scene(wantedScene,func){
+        if (this.nowScene === wantedScene){
             this.sceneFunc[wantedScene] = func
         }
     }
 
     
     changeScene(scene){
-        this.scene = scene;
+        this.nowScene = scene;
         this.sceneChangeDetect = true;
     }
 
@@ -145,6 +179,7 @@ export class applePhi {
     object(img, pos, size = null, vertex = null, texcoord = null){
         const w = size ? size[0] : img.width;
         const h = size ? size[1] : img.height;
+        
         const v = vertex || [
             pos[0], pos[1], 
             pos[0] + w, pos[1], 
