@@ -2,50 +2,43 @@ import { applePhi } from "../../applePhi/src/script/applePhi.js"
 
 
 (async () => {
-
+    
 const phi = new applePhi("display-canvas");
+await phi.display([innerWidth, innerHeight]);
+
 phi.textDisplay("text-canvas");
-phi.display([innerWidth, innerHeight]);
 
 window.addEventListener('resize',()=>{
     phi.resizeDisplay()
 })
 
 
-const img = await phi.imgLoad('../src/img/0.png');
-let test3dobj = phi.obj(img,[100,100],[500,500],[
-    100,100,
-    500,100,
-    100,500,
-    100,500,
-    500,100,
-    1000,1000,
+let test = await phi.quickObj(null,[0,40],[40,40],[255,0,0,255]) 
+phi.reSize(test,[200,1000])
 
-])
-
-
-
+let i = 0
 phi.loop(() => {
-    phi.fill(255,255,255);
-    
-    let test3dobj = phi.obj(img,[100,100],[400,400])
+    phi.fill(90, 90, 100);
 
-    if (phi.press_l){
-        test3dobj = phi.obj(img,[100,100],[500,500],[
-            100,100,
-            500,100,
-            100,500,
-            100,500,
-            500,100,
-            phi.mousepos[0]/phi.screenRatio * 2,phi.mousepos[1]/phi.screenRatio*2
+    phi.blit(test)
+
+    phi.reserve('test',0.1,()=>{ 
+        phi.move(test,[
+            ((phi.width/2) - test.x) / 10,
+            ((phi.height/2) - test.y) / 10,
         ])
-    }
-    // console.log(phi.mousepos[0])
-    phi.flip(test3dobj)
+        phi.rotate(test,(360 - test.angle) / 10)
+        phi.reSize(test,[
+            test.width + (400 - test.width)/10,
+            test.height + (1000 - test.height)/10,
+        ])
+    })
 
-    phi.blit(test3dobj)
+    phi.text('Hello World', [10, 30]);
 
+    
+    
+    
 });
-
 
 })();

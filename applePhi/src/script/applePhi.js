@@ -5,11 +5,24 @@ export class applePhi {
         const canvas_ = document.getElementById(id)
         canvas_.width = innerWidth
         canvas_.height = innerHeight
+
         canvas_.style.margin = 0
         canvas_.style.padding = 0
+
+        canvas_.style.cssText = `
+            display: block;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 100vh;
+        `;
         this.canvas = canvas_;
         this.app = new core(this.canvas);
+        
         this.textCanvas = null;
+
         this.ctx = null;
         this.autoResize = false;
         this.dpr = 1;
@@ -24,13 +37,17 @@ export class applePhi {
         this.nowScene = ''
         this.sceneChangeDetect = false
         this.update()
-
-        this.mousepos = []
+        this.mousepos = [0,0]
         this.click_l = false
         this.click_r = false
         this.press_l = false
         this.press_r = false
+        this.sysImg = null
+        this.groupData = {}
 
+        this.reserveData = {}
+        this.flagData = []
+        
         document.addEventListener('mousedown',(event) => {
             if (event.button == 0){
                 this.click_l = true
@@ -41,7 +58,6 @@ export class applePhi {
                 this.press_r = true
             }
         })
-
         document.addEventListener('mouseup',(event) => {
             if (event.button == 0){
                 this.press_l = false
@@ -50,19 +66,39 @@ export class applePhi {
                 this.press_r = false
             }
         })
-
-
-
         document.addEventListener('mousemove',(event) => {
-            this.mousepos = [event.offsetX,event.offsetY]
+            this.mousepos = [event.offsetX/this.screenRatio*this.dpr,event.offsetY/this.screenRatio*this.dpr]
         })
-
-        
-
 
     }
 
-    
+
+
+    flag(name,func){
+        if (this.flagData.includes(name)) return
+        this.flagData.push(name)
+        func()
+    }
+
+
+    reserve(name,waitTime,func,endTrigger=false){
+        
+        if (name in this.reserveData) {
+            this.reserveData[name].end = Boolean(endTrigger)
+
+            const data = this.reserveData[name]
+            if (data.time < Date.now()){
+                if (data.end){
+                    data.f = null
+                } else {
+                    data.f()
+                }
+            }
+        }
+        else {
+            this.reserveData[name] = {time:waitTime*1000+Date.now(),f:func,end:Boolean(endTrigger)}
+        }
+    }
 
     
     scene(wantedScene,func){
@@ -72,18 +108,62 @@ export class applePhi {
     }
 
     
-    changeScene(scene){
+    sceneChange(scene){
         this.nowScene = scene;
         this.sceneChangeDetect = true;
     }
 
+    async quickObj(path=null,pos,size,color=[0,0,0,255]){
+        let img;
+        let obj;
+        if(path == null){
+            let img = this.sysImg;
+            obj = this.object(img,pos,size)
+            obj.fillColor = color
+            
+        } else {
+            img = await this.imgLoad(path)
+            obj = this.object(img,pos,size)
+        }
+        return obj
+    }
 
+
+    group(name,objList) {
+        this.groupData[name] = objList
+    }   
+
+    groupMove(name,addPos){
+        const g = this.groupGet(name)
+        for(let key in g){
+            const obj = g[key]
+            this.move(obj,addPos)
+        }
+    }
+
+    groupRotate(name,rotate,pos){
+        const g = this.groupGet(name)
+        for(let key in g){
+            const obj = g[key]
+            this.rotate(obj,rotate,'custom',pos)
+        }
+    }
+    
+    groupFunc(name,func){
+        const g = this.groupGet(name)
+        for(let key in g){
+            const obj = g[key]
+            func(obj,key)
+        }
+    }
+
+    groupGet(name){
+        return this.groupData[name]
+    }
 
     mainLoop(func){
         this.mainLoopFunc = func;
     }
-
-     
 
     update() {
         const loop = () => {
@@ -96,6 +176,7 @@ export class applePhi {
         };
         requestAnimationFrame(loop);
     }
+
 
     setting(name=String,value=Boolean){
         if (Object.hasOwn(this.settingList,name)){
@@ -144,6 +225,7 @@ export class applePhi {
         this.ctx.restore();
     }
 
+
     resizeTextCanvas(baseWidth = 1920, baseHeight = 1080) {
         if (this.textCanvas != null){
             this.textCanvas.width = baseWidth + 'px'
@@ -168,7 +250,8 @@ export class applePhi {
         this.resizeTextCanvas(this.width,this.height)
     }
 
-    display(size){
+    async display(size){
+        this.sysImg = await this.imgLoad('applePhi/src/img/sysImg.png')
         this.canvas.width = size[0];
         this.canvas.height = size[1];
         this.width = size[0];
@@ -190,13 +273,35 @@ export class applePhi {
         ];
         return { 
             img, x: pos[0], y: pos[1], width: w, height: h,
-            vertex: v, angle: 0, 
+            vertex: v,
+            angle: 0,
+            name: '',
             texcoord: texcoord || [0,0, 1,0, 0,1, 0,1, 1,0, 1,1],
             fillColor: null
         };
     }
 
     
+
+    rect(pos,size,color=[0,0,0,255]){
+        const obj = this.object(this.sysImg,[...pos],[...size])
+        obj.fillColor = color
+        return obj
+    }
+
+    line(pos1,pos2_,thickness=1,color=[0,0,0,255]){
+        const pos2 = pos2_
+        const distance =  this.distanceGet(pos1,pos2)
+        let obj = this.object(this.sysImg,[pos1[0],pos1[1]],[thickness,distance])
+        const dx = pos2[0] - pos1[0];
+        const dy = pos2[1] - pos1[1];
+        const radian = Math.atan2(dy, dx);
+        const degree = (radian * (180 / Math.PI))- 90;
+        this.rotate(obj,degree,'custom',[pos1[0]+thickness/2,pos1[1]+thickness/2])
+        obj.fillColor = color
+        return obj
+    }
+
 
     fill(r,g,b,a=255){
         if (this.ctx != null && this.textCanvas != null) {this.ctx.clearRect(0, 0, this.textCanvas.width, this.textCanvas.height)}
@@ -210,6 +315,12 @@ export class applePhi {
             );
         }
     }
+
+
+    distanceGet(pos1,pos2){
+        return Math.sqrt((pos2[0] - pos1[0])**2 + (pos2[1] - pos1[1])**2)
+    }
+
 
 
     distanceGetObj(obj1,obj2,mark="center"){
@@ -255,34 +366,25 @@ export class applePhi {
 
 
     rotate(obj,deg,mark="center",pos=[0,0]){
-        const rad = deg * Math.PI / 180;
+        const rad = (deg-90) * Math.PI / 180;
         const cos = Math.cos(rad);
         const sin = Math.sin(rad);
         const rotated = [];
-        if (mark == 'zero'){
-            for (let i = 0; i < obj.vertex.length; i += 2) {
-                const x = obj.vertex[i];
-                const y = obj.vertex[i + 1];
-                const rx = x * cos - y * sin;
-                const ry = x * sin + y * cos;
-                rotated.push(rx, ry);
-            }
-        } else if (mark == 'center') {
-            for (let i = 0; i < obj.vertex.length; i += 2) {
-                const x = obj.vertex[i] - (obj.x+obj.width/2);
-                const y = obj.vertex[i + 1] - (obj.y+obj.height/2);
-                const rx = x * cos - y * sin + (obj.x+obj.width/2);
-                const ry = x * sin + y * cos + (obj.y+obj.height/2);
-                rotated.push(rx, ry);
-            }
-        } else if (mark == 'custom') {
-            for (let i = 0; i < obj.vertex.length; i += 2) {
-                const x = obj.vertex[i] - pos[0];
-                const y = obj.vertex[i + 1] - pos[1];
-                const rx = x * cos - y * sin + pos[0];
-                const ry = x * sin + y * cos + pos[1];
-                rotated.push(rx, ry);
-            }
+        let cx = 0;
+        let cy = 0;
+        if (mark === 'center') {
+            cx = obj.x + obj.width / 2;
+            cy = obj.y + obj.height / 2;
+        } else if (mark === 'custom') {
+            cx = pos[0];
+            cy = pos[1];
+        }
+        for (let i = 0; i < obj.vertex.length; i += 2) {
+            const x = obj.vertex[i] - cx;
+            const y = obj.vertex[i + 1] - cy;
+            const rx = x * cos - y * sin + cx;
+            const ry = x * sin + y * cos + cy;
+            rotated.push(rx, ry);
         }
         obj.vertex = rotated;
         obj.angle += deg;
@@ -337,10 +439,18 @@ export class applePhi {
         const y1 = obj_.y;
         const x2 = obj_.x + obj_.width;
         const y2 = obj_.y + obj_.height;
-        obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]
+        obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]        
+        obj_.angle = 0
         this.rotate(obj_,an);
         return obj_
     }
+
+    rotateTo(obj_,deg,mark="center",pos=[0,0]){
+        const targetDeg = deg - obj_.angle
+        this.rotate(obj_,targetDeg)
+        return obj_;
+    }
+
 
     
     move(obj,pos=Array){
@@ -399,8 +509,21 @@ export class applePhi {
         }
     }
 
+    //#endregion
 
-    blit(obj, mark = 'null') {  
+    blitGroup(name) {
+        const g = this.groupGet(name)
+        for(let key in g){
+            const obj = g[key]
+            this.blit(obj)
+        }
+    }
+
+
+
+
+
+    blit(obj) {  
         if (!obj.img) return;
         const { img, x, y, width, height, vertex, texcoord, fillColor } = obj;
         const ratioMulp =  this.screenRatio;
@@ -409,7 +532,6 @@ export class applePhi {
         const renderW = width * ratioMulp;
         const renderH = height * ratioMulp;
         const scaledVertex = vertex ? vertex.map(v => v * ratioMulp) : null;
-
         this.app.drawImage(
             img, 
             renderX, 
@@ -420,8 +542,10 @@ export class applePhi {
             texcoord, 
             fillColor
         );
+        
+        
     }
-    //#endregion
+    
 
 
     async docsLoad(){

@@ -125,14 +125,9 @@ export class core {
         });
     }
 
-
-
     drawImage(image, x, y, w, h,vertex_=null,texcoord_=null,fillColor_=null) {
         const gl = this.gl;
-
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-
-
         if (vertex_ == null){
             const x1 = x;
             const y1 = y;
@@ -142,25 +137,16 @@ export class core {
         }
 
         const positions = new Float32Array(vertex_)
-      
-
         gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW);
-
         gl.enableVertexAttribArray(this.positionLocation);
         gl.vertexAttribPointer(this.positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-        // 텍스처 좌표 (0~1)
         gl.bindBuffer(gl.ARRAY_BUFFER, this.texcoordBuffer);
-
-
-        
+   
         if (texcoord_ == null){
             const u1 = 0.0;       // 왼쪽
             const v1 = 0.0;       // 위
             const u2 = 1.0;       // 오른쪽
             const v2 = 1.0;       // 아래
-
-            // 삼각형 두 개로 사각형 구성
             texcoord_ = [
                 u1, v1,
                 u2, v1,
@@ -171,17 +157,13 @@ export class core {
             ];
         }
 
-
         const texcoords = new Float32Array(texcoord_)
-
         gl.bufferData(gl.ARRAY_BUFFER, texcoords, gl.STATIC_DRAW);
-
         gl.enableVertexAttribArray(this.texcoordLocation);
         gl.vertexAttribPointer(this.texcoordLocation, 2, gl.FLOAT, false, 0, 0);
 
         // 실제 렌더링
         gl.uniform2f(this.resolutionLocation, gl.canvas.width, gl.canvas.height);
-        
 
         if (fillColor_ != null) {
             gl.uniform4f(
@@ -194,21 +176,16 @@ export class core {
         } else {
             gl.uniform4f(this.colorLocation, 1, 1, 1, 1);
         }
-
-        
-                
-        
         gl.bindTexture(gl.TEXTURE_2D, image.texture);
         gl.drawArrays(gl.TRIANGLES, 0, (vertex_.length / 2));
     }
+
 
     clear(r = 0, g = 0, b = 0, a = 1) {
         const gl = this.gl;
         gl.clearColor(r, g, b, a);
         gl.clear(gl.COLOR_BUFFER_BIT);
     }
-
-    
 
     
     resizeCanvas() {
@@ -219,7 +196,6 @@ export class core {
             this.gl.canvas.width  = displayWidth
             this.gl.canvas.height = displayHeight
             this.gl.viewport(0, 0, displayWidth, displayHeight)
-
             return true;
         }
         return false;
