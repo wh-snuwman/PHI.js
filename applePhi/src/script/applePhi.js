@@ -5,10 +5,8 @@ export class applePhi {
         const canvas_ = document.getElementById(id)
         canvas_.width = innerWidth
         canvas_.height = innerHeight
-
         canvas_.style.margin = 0
         canvas_.style.padding = 0
-
         canvas_.style.cssText = `
             display: block;
             position: absolute;
@@ -44,9 +42,11 @@ export class applePhi {
         this.press_r = false
         this.sysImg = null
         this.groupData = {}
-
         this.reserveData = {}
         this.flagData = []
+
+        //
+        this._textCanvas = null
         
         document.addEventListener('mousedown',(event) => {
             if (event.button == 0){
@@ -69,11 +69,7 @@ export class applePhi {
         document.addEventListener('mousemove',(event) => {
             this.mousepos = [event.offsetX/this.screenRatio*this.dpr,event.offsetY/this.screenRatio*this.dpr]
         })
-
     }
-
-
-
     flag(name,func){
         if (this.flagData.includes(name)) return
         this.flagData.push(name)
@@ -177,7 +173,6 @@ export class applePhi {
         requestAnimationFrame(loop);
     }
 
-
     setting(name=String,value=Boolean){
         if (Object.hasOwn(this.settingList,name)){
             this.settingList[name] = value
@@ -204,26 +199,20 @@ export class applePhi {
         document.fonts.add(font);
     }
 
-    //#region 
-    text(text,pos=[0,0],size='20px',color='black',font=null,align='left'){
-        if (this.ctx == null){
-            console.error('text canvas is not defined')
-            return;
-        }
-        this.ctx.save();
-        
-        if (font == null || font == undefined || typeof(font) != 'string'){
-            this.ctx.font = `${size} serif`;
-        } else {
-            this.ctx.font = `${size} ${font}`;
-        }
-        
-        this.ctx.fillStyle = color;
-        this.ctx.textAlign = align;
-        this.ctx.textBaseline = 'alphabetic';
-        this.ctx.fillText(text, pos[0]*this.screenRatio,pos[1]*this.screenRatio);
-        this.ctx.restore();
+
+
+
+    text(text, pos = [0, 0], size = '20px', color = 'black', font = null, align = 'left') {
+        this.app.text(text,pos,size,color,font,align)
     }
+
+
+    //#region 
+
+
+
+
+
 
 
     resizeTextCanvas(baseWidth = 1920, baseHeight = 1080) {
@@ -277,7 +266,8 @@ export class applePhi {
             angle: 0,
             name: '',
             texcoord: texcoord || [0,0, 1,0, 0,1, 0,1, 1,0, 1,1],
-            fillColor: null
+            fillColor: null,
+            alpha: 255,
         };
     }
 
@@ -366,7 +356,7 @@ export class applePhi {
 
 
     rotate(obj,deg,mark="center",pos=[0,0]){
-        const rad = (deg-90) * Math.PI / 180;
+        const rad = (deg) * Math.PI / 180;
         const cos = Math.cos(rad);
         const sin = Math.sin(rad);
         const rotated = [];
@@ -423,23 +413,39 @@ export class applePhi {
             const y2 = obj_.y + obj_.height;
             obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]
         }
+        obj_.angle = 0
         this.rotate(obj_,an);
         return obj_
     }
 
-    reSize(obj_,size){
+    reSize(obj_,size,mark){
         const an = obj_.angle;
-        const obj = {
-            ...obj_,
-            vertex: [...obj_.vertex]
-        };
-        obj_.width = size[0];
-        obj_.height = size[1];
-        const x1 = obj_.x;
-        const y1 = obj_.y;
-        const x2 = obj_.x + obj_.width;
-        const y2 = obj_.y + obj_.height;
-        obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]        
+        if (mark == 'center'){
+            const obj = {
+                ...obj_,
+                vertex: [...obj_.vertex]
+            };
+            obj_.width = size[0]
+            obj_.height = size[1]
+            obj_.x -= obj_.width/2
+            obj_.y -= obj_.height/2
+            obj_.x += obj.width/2
+            obj_.y += obj.height/2
+            const x1 = obj_.x;
+            const y1 = obj_.y;
+            const x2 = obj_.x + obj_.width;
+            const y2 = obj_.y + obj_.height;
+            obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2] 
+        } else {
+            obj_.width = size[0]
+            obj_.height = size[1]
+            const x1 = obj_.x;
+            const y1 = obj_.y;
+            const x2 = obj_.x + obj_.width;
+            const y2 = obj_.y + obj_.height;
+            obj_.vertex = [x1, y1,x2, y1,x1, y2,x1, y2,x2, y1,x2, y2]
+        }
+
         obj_.angle = 0
         this.rotate(obj_,an);
         return obj_
@@ -521,31 +527,33 @@ export class applePhi {
 
 
 
-
-
     blit(obj) {  
         if (!obj.img) return;
-        const { img, x, y, width, height, vertex, texcoord, fillColor } = obj;
-        const ratioMulp =  this.screenRatio;
+        const { img, x, y, width, height, vertex, texcoord, fillColor, alpha } = obj;
+        const ratioMulp = this.screenRatio;
+        
         const renderX = x * ratioMulp;
         const renderY = y * ratioMulp;
         const renderW = width * ratioMulp;
         const renderH = height * ratioMulp;
+        
+        // vertex가 존재할 때만 비율 계산 적용
         const scaledVertex = vertex ? vertex.map(v => v * ratioMulp) : null;
+
+        // 알파값과 컬러 배열은 core.js 내부에서 정규화(0~1 변환)를 수행하므로 원본을 그대로 전달합니다.
         this.app.drawImage(
             img, 
             renderX, 
             renderY, 
             renderW, 
             renderH, 
-            scaledVertex || vertex, 
+            scaledVertex, // 정형화된 vertex 전달 (없으면 null)
             texcoord, 
-            fillColor
+            fillColor,    // 변수 오타 제거하고 원본 배열([R,G,B,A]) 전달
+            alpha !== undefined ? alpha : 255 // alpha가 없으면 기본값 255
         );
-        
-        
     }
-    
+        
 
 
     async docsLoad(){
