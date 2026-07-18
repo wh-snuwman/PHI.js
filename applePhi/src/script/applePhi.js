@@ -49,6 +49,7 @@ export class applePhi {
         this._textCanvas = null
         
         document.addEventListener('mousedown',(event) => {
+            console.log(event)
             if (event.button == 0){
                 this.click_l = true
                 this.press_l = true
@@ -536,21 +537,17 @@ export class applePhi {
         const renderY = y * ratioMulp;
         const renderW = width * ratioMulp;
         const renderH = height * ratioMulp;
-        
-        // vertex가 존재할 때만 비율 계산 적용
         const scaledVertex = vertex ? vertex.map(v => v * ratioMulp) : null;
-
-        // 알파값과 컬러 배열은 core.js 내부에서 정규화(0~1 변환)를 수행하므로 원본을 그대로 전달합니다.
         this.app.drawImage(
             img, 
             renderX, 
             renderY, 
             renderW, 
             renderH, 
-            scaledVertex, // 정형화된 vertex 전달 (없으면 null)
+            scaledVertex,
             texcoord, 
-            fillColor,    // 변수 오타 제거하고 원본 배열([R,G,B,A]) 전달
-            alpha !== undefined ? alpha : 255 // alpha가 없으면 기본값 255
+            fillColor,
+            alpha !== undefined ? alpha : 255
         );
     }
         
